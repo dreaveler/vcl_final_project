@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <string>
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -14,7 +14,7 @@
 #include "Labs/Final_project/CaseFinal.h"
 #include "Labs/Common/ImGuiHelper.h"
 
-namespace VCX::Labs::Animation {
+namespace VCX::Labs::Final {
 namespace {
 #ifdef _WIN32
     bool OpenBVHFileDialog(std::array<char, 260> & path_buffer) {
@@ -175,7 +175,7 @@ namespace {
         }
         if (_browseFailed) {
             if (_browseError == 0) {
-                ImGui::Text("Browse canceled (请手动输入路径)");
+                ImGui::Text("Browse canceled (璇锋墜鍔ㄨ緭鍏ヨ矾寰?");
             } else {
                 ImGui::Text("Browse failed (0x%08lX)", _browseError);
             }
@@ -188,7 +188,7 @@ namespace {
                 _frameIndex = 0;
                 _timeAccum = 0.0f;
                 _play = false;
-                if (_loaded) ImGui::Text("加载成功");
+                if (_loaded) ImGui::Text("鍔犺浇鎴愬姛");
             } else {
                 _loaded = false;
             }
@@ -270,4 +270,4 @@ namespace {
         _timeAccum = 0.0f;
         _play = false;
     }
-} // namespace VCX::Labs::Animation
+} // namespace VCX::Labs::Final

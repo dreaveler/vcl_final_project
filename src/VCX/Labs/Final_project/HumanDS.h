@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef HUMANDS_H
 #define HUMANDS_H
 #include <cstddef>
@@ -10,7 +10,7 @@
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/quaternion.hpp>
-namespace VCX::Labs::Animation{
+namespace VCX::Labs::Final{
     class Joint;
     using JointPtr = std::shared_ptr<Joint>;
     class Joint{

@@ -1,7 +1,12 @@
-#include "Labs/Final_project/App.h"
+﻿#include "Labs/Final_project/App.h"
 
-namespace VCX::Labs::Animation {
-    App::App() : _ui(Labs::Common::UIOptions { }) {
+namespace VCX::Labs::Final {
+    App::App() :
+        _viewer(),
+        _caseFinal(),
+        _caseModel(_viewer, { Assets::ExampleModel::Arma }),
+        _cases { _caseFinal, _caseModel },
+        _ui(Labs::Common::UIOptions { }) {
     }
 
     void App::OnFrame() {

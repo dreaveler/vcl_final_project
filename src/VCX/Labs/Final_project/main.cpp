@@ -3,7 +3,7 @@
 
 int main() {
     using namespace VCX;
-    return Engine::RunApp<Labs::Animation::App>(Engine::AppContextOptions {
+    return Engine::RunApp<Labs::Final::App>(Engine::AppContextOptions {
         .Title      = "VCX Labs Final Project",
         .WindowSize = { 1024, 768 },
         .FontSize   = 16,

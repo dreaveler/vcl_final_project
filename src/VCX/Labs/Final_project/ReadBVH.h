@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef READBVH_H
 #define READBVH_H
 #include <cstddef>
@@ -10,7 +10,7 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include "HumanDS.h"
-namespace VCX::Labs::Animation{
+namespace VCX::Labs::Final{
     enum class BVHChannelType {
         Xposition,
         Yposition,

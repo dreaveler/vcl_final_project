@@ -1,4 +1,4 @@
-#include <functional>
+﻿#include <functional>
 #include <memory>
 #include "HumanDS.h"
 #include <glm/glm.hpp>
@@ -6,12 +6,11 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-namespace VCX::Labs::Animation{
+namespace VCX::Labs::Final{
     using JointPtr = std::shared_ptr<Joint>;
     Joint::Joint(bool _isleaf):isleaf(_isleaf),name("END"){}
     Joint::Joint(std::string _name):name(_name){}
-    void Joint::set_rotation(const glm::vec3& rot){   //这里已经默认输入的rot是欧拉角：XYZ的顺序了 也就是说读入bvh时已经顺序矫正
-        euler_rotation = rot;
+    void Joint::set_rotation(const glm::vec3& rot){   //杩欓噷宸茬粡榛樿杈撳叆鐨剅ot鏄鎷夎锛歑YZ鐨勯『搴忎簡 涔熷氨鏄璇诲叆bvh鏃跺凡缁忛『搴忕煫姝?        euler_rotation = rot;
         rotation = glm::quat(euler_rotation);
     }
     void Joint::set_offset(const glm::vec3& off){

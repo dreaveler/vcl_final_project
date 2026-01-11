@@ -1,10 +1,10 @@
-#include "ReadBVH.h"
+﻿#include "ReadBVH.h"
 
 #include <fstream>
 #include <string>
 #include <vector>
 
-namespace VCX::Labs::Animation {
+namespace VCX::Labs::Final {
 namespace {
 
     BVHChannelType ParseChannelType(const std::string & token) {
@@ -169,4 +169,4 @@ bool LoadBVHAsMotion(const std::string & path, Motion & out) {
     return true;
 }
 
-} // namespace VCX::Labs::Animation
+} // namespace VCX::Labs::Final

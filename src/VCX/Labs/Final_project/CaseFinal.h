@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Engine/GL/Frame.hpp"
 #include "Engine/GL/Program.h"
 #include "Engine/GL/RenderItem.h"
@@ -11,7 +11,7 @@
 #include <array>
 #include <string>
 
-namespace VCX::Labs::Animation {
+namespace VCX::Labs::Final {
 
     class BoxRenderer {
     public:
@@ -75,4 +75,4 @@ namespace VCX::Labs::Animation {
         Motion                              _motion;
         std::array<char, 260>               _pathBuffer {};
     };
-} // namespace VCX::Labs::Animation
+} // namespace VCX::Labs::Final
