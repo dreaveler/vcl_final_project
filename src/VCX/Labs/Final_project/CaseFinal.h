@@ -64,9 +64,11 @@ namespace VCX::Labs::Animation {
         bool                                _loaded { false };
         bool                                _play { false };
         bool                                _showAxis { true };
+        bool                                _browseFailed { false };
+        unsigned long                       _browseError { 0 };
         float                               _timeAccum { 0.0f };
         std::size_t                         _frameIndex { 0 };
-        float                               _scale { 0.1f };
+        float                               _scale { 0.025f };
 
         BackGroundRender                    BackGround;
         std::vector<BoxRenderer>            arms; // for render the arm

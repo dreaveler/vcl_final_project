@@ -4,6 +4,9 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
 #include <windows.h>
 #include <commdlg.h>
 #endif
@@ -17,11 +20,22 @@ namespace {
     bool OpenBVHFileDialog(std::array<char, 260> & path_buffer) {
         OPENFILENAMEA ofn {};
         ofn.lStructSize = sizeof(ofn);
+        HWND owner = glfwGetWin32Window(glfwGetCurrentWindow());
+        if (! owner) owner = GetActiveWindow();
+        ofn.hwndOwner = owner;
         ofn.lpstrFile = path_buffer.data();
         ofn.nMaxFile = static_cast<DWORD>(path_buffer.size());
         ofn.lpstrFilter = "BVH Files\0*.bvh\0All Files\0*.*\0";
         ofn.nFilterIndex = 1;
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
+        std::string current(path_buffer.data());
+        std::string initial_dir;
+        auto pos = current.find_last_of("\\/");
+        if (pos != std::string::npos) {
+            initial_dir = current.substr(0, pos);
+            ofn.lpstrInitialDir = initial_dir.c_str();
+        }
+        if (ofn.lpstrFile) ofn.lpstrFile[0] = '\0';
         return GetOpenFileNameA(&ofn) == TRUE;
     }
 #else
@@ -116,6 +130,7 @@ namespace {
         _cameraManager.Save(_camera);
         std::string default_path = "data/bvh/cmuconvert-mb2-01-09/01/01_01.bvh";
         std::copy_n(default_path.begin(), std::min(default_path.size(), _pathBuffer.size() - 1), _pathBuffer.begin());
+        _pathBuffer[_pathBuffer.size() - 1] = '\0';
         
         ResetSystem();
     }
@@ -155,7 +170,15 @@ namespace {
         ImGui::InputText("##bvh_path", _pathBuffer.data(), _pathBuffer.size());
         ImGui::SameLine();
         if (ImGui::Button("Browse")) {
-            OpenBVHFileDialog(_pathBuffer);
+            _browseFailed = !OpenBVHFileDialog(_pathBuffer);
+            _browseError = _browseFailed ? CommDlgExtendedError() : 0;
+        }
+        if (_browseFailed) {
+            if (_browseError == 0) {
+                ImGui::Text("Browse canceled (请手动输入路径)");
+            } else {
+                ImGui::Text("Browse failed (0x%08lX)", _browseError);
+            }
         }
         if (ImGui::Button("Load")) {
             Motion loaded;

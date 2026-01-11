@@ -43,11 +43,9 @@ namespace VCX::Labs::Animation{
     public:
         JointPtr CreateJoint(const std::string & name, bool is_leaf = false);
         void SetRoot(const JointPtr & r);
-        JointPtr GetRoot() const;
         void AttachChild(const JointPtr & parent, const JointPtr & child);
         void SetJointOffset(const JointPtr & joint, const glm::vec3 & off);
-        void SetJointRotation(const JointPtr & joint, const glm::vec3 & rot);
-        void SetJointGlobal(const JointPtr & joint, const glm::vec3 & trans, const glm::quat & rot);
+        void SetJointRotationQuat(const JointPtr & joint, const glm::quat & rot);
         glm::vec3 GetJointOffset(const JointPtr & joint) const;
         std::vector<JointPtr> DFSJoints() const;
         std::vector<glm::vec3> GetSegments() const;

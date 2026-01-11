@@ -1,9 +1,6 @@
-#include<iostream>
-#include<memory>
-#include<algorithm>
-#include<stack>
-#include<functional>
-#include"HumanDS.h"
+#include <functional>
+#include <memory>
+#include "HumanDS.h"
 #include <glm/glm.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/ext.hpp>
@@ -45,10 +42,6 @@ namespace VCX::Labs::Animation{
         root = r;
     }
 
-    JointPtr HumanDS::GetRoot() const {
-        return root;
-    }
-
     void HumanDS::AttachChild(const JointPtr & parent, const JointPtr & child) {
         if (! parent || ! child) return;
         child->set_father(parent);
@@ -60,15 +53,10 @@ namespace VCX::Labs::Animation{
         joint->set_offset(off);
     }
 
-    void HumanDS::SetJointRotation(const JointPtr & joint, const glm::vec3 & rot) {
+    void HumanDS::SetJointRotationQuat(const JointPtr & joint, const glm::quat & rot) {
         if (! joint) return;
-        joint->set_rotation(rot);
-    }
-
-    void HumanDS::SetJointGlobal(const JointPtr & joint, const glm::vec3 & trans, const glm::quat & rot) {
-        if (! joint) return;
-        joint->global_trans = trans;
-        joint->global_rot = rot;
+        joint->rotation = rot;
+        joint->euler_rotation = glm::eulerAngles(rot);
     }
 
     glm::vec3 HumanDS::GetJointOffset(const JointPtr & joint) const {

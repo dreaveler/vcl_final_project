@@ -138,16 +138,16 @@ bool LoadBVHAsMotion(const std::string & path, Motion & out) {
         auto frame_joints = frame.DFSJoints();
 
         std::vector<glm::vec3> pos_delta(joint_count, glm::vec3(0.0f));
-        std::vector<glm::vec3> rot_euler(joint_count, glm::vec3(0.0f));
+        std::vector<glm::quat> rot_quat(joint_count, glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 
         for (std::size_t c = 0; c < channel_count; c++) {
             float v = clip.frames[f * channel_count + c];
             const auto & ch = clip.channels[c];
             int idx = ch.joint_index;
             if (idx < 0 || static_cast<std::size_t>(idx) >= joint_count) continue;
-            if (ch.type == BVHChannelType::Xrotation) rot_euler[idx].x = v;
-            if (ch.type == BVHChannelType::Yrotation) rot_euler[idx].y = v;
-            if (ch.type == BVHChannelType::Zrotation) rot_euler[idx].z = v;
+            if (ch.type == BVHChannelType::Xrotation) rot_quat[idx] = rot_quat[idx] * glm::angleAxis(glm::radians(v), glm::vec3(1.0f, 0.0f, 0.0f));
+            if (ch.type == BVHChannelType::Yrotation) rot_quat[idx] = rot_quat[idx] * glm::angleAxis(glm::radians(v), glm::vec3(0.0f, 1.0f, 0.0f));
+            if (ch.type == BVHChannelType::Zrotation) rot_quat[idx] = rot_quat[idx] * glm::angleAxis(glm::radians(v), glm::vec3(0.0f, 0.0f, 1.0f));
             if (ch.type == BVHChannelType::Xposition) pos_delta[idx].x = v;
             if (ch.type == BVHChannelType::Yposition) pos_delta[idx].y = v;
             if (ch.type == BVHChannelType::Zposition) pos_delta[idx].z = v;
@@ -159,9 +159,7 @@ bool LoadBVHAsMotion(const std::string & path, Motion & out) {
             if (pos_delta[i] != glm::vec3(0.0f)) {
                 frame.SetJointOffset(joint, base_offset + pos_delta[i]);
             }
-            if (rot_euler[i] != glm::vec3(0.0f)) {
-                frame.SetJointRotation(joint, glm::radians(rot_euler[i]));
-            }
+            frame.SetJointRotationQuat(joint, rot_quat[i]);
         }
 
         frame.UpdateGlobal();
