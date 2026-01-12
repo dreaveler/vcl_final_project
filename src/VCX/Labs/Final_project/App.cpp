@@ -4,7 +4,7 @@ namespace VCX::Labs::Final {
     App::App() :
         _viewer(),
         _caseFinal(),
-        _caseModel(_viewer, { Assets::ExampleModel::Arma }),
+        _caseModel(_viewer, { Assets::ExampleModel::Human, Assets::ExampleModel::Dancing }),
         _cases { _caseFinal, _caseModel },
         _ui(Labs::Common::UIOptions { }) {
     }

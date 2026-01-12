@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -35,11 +36,12 @@ namespace VCX::Labs::Final{
         Joint(std::string);
         void update_global();
         glm::vec3 get_globaltrans() const;
+        glm::quat get_globalrot() const;
     };
     class HumanDS{
         JointPtr root;
-        void UpdateGlobalRecursive(const JointPtr & joint);
-        JointPtr CloneRecursive(const JointPtr & joint, const JointPtr & parent);
+        void UpdateGlobalRecursive(const JointPtr & joint);   //递归更新
+        JointPtr CloneRecursive(const JointPtr & joint, const JointPtr & parent);   //递归复制
     public:
         JointPtr CreateJoint(const std::string & name, bool is_leaf = false);
         void SetRoot(const JointPtr & r);
@@ -48,7 +50,8 @@ namespace VCX::Labs::Final{
         void SetJointRotationQuat(const JointPtr & joint, const glm::quat & rot);
         glm::vec3 GetJointOffset(const JointPtr & joint) const;
         std::vector<JointPtr> DFSJoints() const;
-        std::vector<glm::vec3> GetSegments() const;
+        std::vector<glm::vec3> GetSegments() const;  //得到骨骼的分离形式
+        std::vector<std::pair<std::size_t, std::size_t>> GetSegmentIndices() const;   //得到骨骼两端序号在DFS下的集合
         void UpdateGlobal();
         HumanDS Clone() const;
     };

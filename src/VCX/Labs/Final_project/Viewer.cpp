@@ -13,11 +13,19 @@ namespace VCX::Labs::Final {
                 Engine::GL::SharedShader("assets/shaders/three.vert"),
                 Engine::GL::SharedShader("assets/shaders/three.geom"),
                 Engine::GL::SharedShader("assets/shaders/three.frag") })),
-        _uniformBlock(0, Engine::GL::DrawFrequency::Stream) {
+        _uniformBlock(0, Engine::GL::DrawFrequency::Stream),
+        _lineProgram(
+            Engine::GL::UniqueProgram({
+                Engine::GL::SharedShader("assets/shaders/flat.vert"),
+                Engine::GL::SharedShader("assets/shaders/flat.frag") })),
+        _lineItem(
+            Engine::GL::VertexLayout()
+                .Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0),
+            Engine::GL::PrimitiveType::Lines) {
         _program.BindUniformBlock("PassConstants", 0);
     }
 
-    Common::CaseRenderResult Viewer::Render(RenderOptions const & options, ModelObject & modelObject, Engine::Camera &camera, Engine::ICameraManager & cameraManager, std::pair<std::uint32_t, std::uint32_t> desiredSize) {
+    Common::CaseRenderResult Viewer::Render(RenderOptions const & options, ModelObject & modelObject, Engine::Camera &camera, Engine::ICameraManager & cameraManager, std::pair<std::uint32_t, std::uint32_t> desiredSize, std::span<glm::vec3 const> skeletonLines) {
         _frame.Resize(desiredSize);
         gl_using(_frame);
 
@@ -47,6 +55,16 @@ namespace VCX::Labs::Final {
         }
 
         modelObject.Draw({ _program.Use() });
+
+        if (! skeletonLines.empty()) {
+            _lineProgram.GetUniforms().SetByName("u_Projection", camera.GetProjectionMatrix(float(desiredSize.first) / desiredSize.second));
+            _lineProgram.GetUniforms().SetByName("u_View", camera.GetViewMatrix());
+            _lineProgram.GetUniforms().SetByName("u_Color", glm::vec3(0.2f, 0.9f, 0.2f));
+            _lineItem.UpdateVertexBuffer("position", Engine::make_span_bytes<glm::vec3>(skeletonLines));
+            glLineWidth(2.0f);
+            _lineItem.Draw({ _lineProgram.Use() });
+            glLineWidth(1.0f);
+        }
 
         if (options.Wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

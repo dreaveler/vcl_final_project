@@ -1,5 +1,6 @@
 ﻿#include <functional>
 #include <memory>
+#include <unordered_map>
 #include "HumanDS.h"
 #include <glm/glm.hpp>
 #include <glm/ext/quaternion_float.hpp>
@@ -30,6 +31,10 @@ namespace VCX::Labs::Final{
 
     glm::vec3 Joint::get_globaltrans() const{
         return global_trans;
+    }
+
+    glm::quat Joint::get_globalrot() const{
+        return global_rot;
     }
 
     JointPtr HumanDS::CreateJoint(const std::string & name, bool is_leaf) {
@@ -82,6 +87,27 @@ namespace VCX::Labs::Final{
             for (auto const & child : j->children) {
                 segments.push_back(j->global_trans);
                 segments.push_back(child->global_trans);
+            }
+        }
+        return segments;
+    }
+
+    std::vector<std::pair<std::size_t, std::size_t>> HumanDS::GetSegmentIndices() const {
+        std::vector<std::pair<std::size_t, std::size_t>> segments;
+        auto joints = DFSJoints();
+        std::unordered_map<Joint*, std::size_t> index_of;
+        index_of.reserve(joints.size());
+        for (std::size_t i = 0; i < joints.size(); i++) {
+            index_of[joints[i].get()] = i;
+        }
+        for (auto const & j : joints) {
+            auto it = index_of.find(j.get());
+            if (it == index_of.end()) continue;
+            std::size_t parent_idx = it->second;
+            for (auto const & child : j->children) {
+                auto child_it = index_of.find(child.get());
+                if (child_it != index_of.end())
+                    segments.emplace_back(parent_idx, child_it->second);
             }
         }
         return segments;

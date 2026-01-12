@@ -1,10 +1,13 @@
 ﻿#pragma once
 
+#include <span>
+
 #include <glm/glm.hpp>
 
 #include "Assets/bundled.h"
 #include "Engine/GL/Frame.hpp"
 #include "Engine/GL/Program.h"
+#include "Engine/GL/RenderItem.h"
 #include "Engine/GL/UniformBlock.hpp"
 #include "Labs/Final_project/ModelObject.h"
 #include "Labs/Common/ICase.h"
@@ -42,7 +45,7 @@ namespace VCX::Labs::Final {
         auto GetSize() const { return _frame.GetSize(); }
         auto const & GetTexture() { return _frame.GetColorAttachment(); }
 
-        Common::CaseRenderResult Render(RenderOptions const & options, ModelObject & modelObject, Engine::Camera &camera, Engine::ICameraManager & cameraManager, std::pair<std::uint32_t, std::uint32_t> desiredSize);
+        Common::CaseRenderResult Render(RenderOptions const & options, ModelObject & modelObject, Engine::Camera &camera, Engine::ICameraManager & cameraManager, std::pair<std::uint32_t, std::uint32_t> desiredSize, std::span<glm::vec3 const> skeletonLines = {});
 
         static void SetupRenderOptionsUI(RenderOptions & options, Common::OrbitCameraManager & cameraManager);
 
@@ -50,5 +53,7 @@ namespace VCX::Labs::Final {
         Engine::GL::UniqueProgram                      _program;
         Engine::GL::UniqueUniformBlock<PassConstants>  _uniformBlock;
         Engine::GL::UniqueRenderFrame                  _frame;
+        Engine::GL::UniqueProgram                      _lineProgram;
+        Engine::GL::UniqueRenderItem                   _lineItem;
     };
 }
