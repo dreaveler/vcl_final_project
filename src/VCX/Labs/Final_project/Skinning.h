@@ -13,7 +13,7 @@ namespace VCX::Labs::Final::Skinning {
         int   heatIterations = 20;
         float heatLambda = 0.6f;
         float heatAnchorRadius = 0.05f;
-        int   componentMaxJoints = 3;
+        int   componentMaxJoints = 2; //每个连通分块最多允许的骨骼参与计算数量
     };
 
     struct Influence {

@@ -19,8 +19,9 @@
 #include <commdlg.h>
 #endif
 
-#include "Labs/Final_project/CaseSmoothing.h"
+#include "Labs/Final_project/CaseSkinning.h"
 #include "Labs/Common/ImGuiHelper.h"
+#include "Engine/loader.h"
 
 namespace VCX::Labs::Final {
 
@@ -49,8 +50,34 @@ namespace {
         if (ofn.lpstrFile) ofn.lpstrFile[0] = '\0';
         return GetOpenFileNameA(&ofn) == TRUE;
     }
+
+    bool OpenMeshFileDialog(std::array<char, 260> & path_buffer) {
+        OPENFILENAMEA ofn {};
+        ofn.lStructSize = sizeof(ofn);
+        HWND owner = glfwGetWin32Window(glfwGetCurrentWindow());
+        if (! owner) owner = GetActiveWindow();
+        ofn.hwndOwner = owner;
+        ofn.lpstrFile = path_buffer.data();
+        ofn.nMaxFile = static_cast<DWORD>(path_buffer.size());
+        ofn.lpstrFilter = "OBJ Files\0*.obj\0All Files\0*.*\0";
+        ofn.nFilterIndex = 1;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
+        std::string current(path_buffer.data());
+        std::string initial_dir;
+        auto pos = current.find_last_of("\\/");
+        if (pos != std::string::npos) {
+            initial_dir = current.substr(0, pos);
+            ofn.lpstrInitialDir = initial_dir.c_str();
+        }
+        if (ofn.lpstrFile) ofn.lpstrFile[0] = '\0';
+        return GetOpenFileNameA(&ofn) == TRUE;
+    }
 #else
     bool OpenBVHFileDialog(std::array<char, 260> &) {
+        return false;
+    }
+
+    bool OpenMeshFileDialog(std::array<char, 260> &) {
         return false;
     }
 #endif
@@ -73,7 +100,7 @@ namespace {
     }
 } // namespace
 
-    CaseSmoothing::CaseSmoothing(Viewer & viewer, std::initializer_list<Assets::ExampleModel> && models) :
+    CaseSkinning::CaseSkinning(Viewer & viewer, std::initializer_list<Assets::ExampleModel> && models) :
         _models(models),
         _viewer(viewer) {
         _cameraManager.EnablePan       = false;
@@ -87,20 +114,29 @@ namespace {
         ResetModel();
     }
 
-    void CaseSmoothing::OnSetupPropsUI() {
-        if (ImGui::BeginCombo("Model", GetModelName(_modelIdx))) {
-            for (std::size_t i = 0; i < _models.size(); ++i) {
-                bool selected = i == _modelIdx;
-                if (ImGui::Selectable(GetModelName(i), selected)) {
-                    if (! selected) {
-                        _modelIdx  = i;
-                        _recompute = true;
-                    }
-                }
-            }
-            ImGui::EndCombo();
-        }
+    void CaseSkinning::OnSetupPropsUI() {
         Common::ImGuiHelper::SaveImage(_viewer.GetTexture(), _viewer.GetSize(), true);
+        ImGui::Spacing();
+
+        ImGui::Text("Mesh Path");
+        ImGui::SameLine();
+        float mesh_button_width = ImGui::CalcTextSize("Browse").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        float mesh_spacing = ImGui::GetStyle().ItemSpacing.x;
+        float mesh_avail = ImGui::GetContentRegionAvail().x;
+        ImGui::SetNextItemWidth(std::max(80.0f, mesh_avail - mesh_button_width - mesh_spacing));
+        ImGui::InputText("##mesh_path", _meshPath.data(), _meshPath.size());
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##mesh")) {
+            OpenMeshFileDialog(_meshPath);
+        }
+        if (ImGui::Button("Load Mesh")) {
+            Engine::SurfaceMesh loaded = Engine::LoadSurfaceMesh(_meshPath.data(), true);
+            if (! loaded.Positions.empty()) {
+                loaded.NormalizePositions();
+                _customMesh = std::move(loaded);
+                _recompute = true;
+            }
+        }
         ImGui::Spacing();
 
         ImGui::Text("BVH Path");
@@ -143,11 +179,6 @@ namespace {
         if (ImGui::SliderFloat("Skeleton Scale", &_skeletonScale, 0.001f, 0.1f, "%.3f")) {
             _weightsDirty = true;
         }
-        if (ImGui::Checkbox("Auto Align Mesh", &_autoAlign)) {
-            _weightsDirty = true;
-            UpdateAlignedMesh();
-            _modelObject.ReplaceMesh(_bindMesh);
-        }
         if (ImGui::SliderInt("Heat Iterations", &_heatIterations, 1, 100)) {
             _weightsDirty = true;
         }
@@ -160,13 +191,12 @@ namespace {
         if (ImGui::SliderInt("Component Max Joints", &_componentMaxJoints, 1, 8)) {
             _weightsDirty = true;
         }
-        ImGui::Checkbox("Show Skeleton", &_showSkeleton);
         ImGui::Spacing();
 
         Viewer::SetupRenderOptionsUI(_options, _cameraManager);
     }
 
-    Common::CaseRenderResult CaseSmoothing::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
+    Common::CaseRenderResult CaseSkinning::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (_recompute) {
             _recompute = false;
             ResetModel();
@@ -198,17 +228,20 @@ namespace {
             }
         }
         std::span<glm::vec3 const> skeleton_lines;
-        if (_showSkeleton && ! _skeletonSegments.empty())
+        if (! _skeletonSegments.empty())
             skeleton_lines = std::span<glm::vec3 const>(_skeletonSegments);
         return _viewer.Render(_options, _modelObject, _camera, _cameraManager, desiredSize, skeleton_lines);
     }
 
-    void CaseSmoothing::OnProcessInput(ImVec2 const & pos) {
+    void CaseSkinning::OnProcessInput(ImVec2 const & pos) {
         _cameraManager.ProcessInput(_camera, pos);
     }
 
-    void CaseSmoothing::ResetModel() {
-        _sourceMesh = GetModelMesh(_modelIdx);
+    void CaseSkinning::ResetModel() {
+        if (! _customMesh.Positions.empty())
+            _sourceMesh = _customMesh;
+        else
+            _sourceMesh = GetModelMesh(_modelIdx);
         UpdateAlignedMesh();
         _skinnedMesh = _bindMesh;
         _modelObject.ReplaceMesh(_bindMesh);
@@ -218,9 +251,9 @@ namespace {
         _lastFrameIndex = static_cast<std::size_t>(-1);
     }
 
-    void CaseSmoothing::UpdateAlignedMesh() {
+    void CaseSkinning::UpdateAlignedMesh() {
         _bindMesh = _sourceMesh;
-        if (! _autoAlign || ! _loaded || _motion.FrameCount() == 0 || _bindMesh.Positions.empty())
+        if (! _loaded || _motion.FrameCount() == 0 || _bindMesh.Positions.empty())
             return;
 
         auto joints = _motion.frames[0].DFSJoints();

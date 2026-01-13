@@ -96,30 +96,30 @@ namespace VCX::Labs::Final::Skinning {
         invBind.resize(joints.size());
 
         for (std::size_t i = 0; i < joints.size(); i++) {
-            glm::vec3 pos = joints[i]->get_globaltrans() * skeletonScale;
+            glm::vec3 pos = joints[i]->get_globaltrans() * skeletonScale; //关节的全局位置*尺度
             glm::quat rot = joints[i]->get_globalrot();
-            glm::mat4 bind = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);
-            invBind[i] = glm::inverse(bind);
-            bind_positions[i] = pos;
+            glm::mat4 bind = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);  //由原点的变换矩阵
+            invBind[i] = glm::inverse(bind);  //mesh的顶点变换到关节附近的空间中
+            bind_positions[i] = pos;  
         }
 
         auto segments = motion.frames[0].GetSegmentIndices();
 
-        constexpr int kMaxInfluence = 4;
+        constexpr int kMaxInfluence = 4;  //最多k个关节可以影响一个顶点
         int max_influences = kMaxInfluence;
-        float weight_radius = 0.5f;
-        float falloff_power = 2.0f;
-        float min_weight = 0.02f;
-        std::size_t vcount = bindMesh.Positions.size();
-        std::size_t jcount = bind_positions.size();
+        float weight_radius = 0.5f; //距离衰减影响半径
+        float falloff_power = 2.0f; //衰减指数幂指数
+        float min_weight = 0.02f;  //最终选择top-k时的最小权重阈值 若小 舍去
+        std::size_t vcount = bindMesh.Positions.size();  //顶点数
+        std::size_t jcount = bind_positions.size();  //关节数
         weights.resize(vcount);
 
-        auto neighbors = BuildAdjacency(bindMesh);
-        auto const component_info = BuildComponents(neighbors);
-        auto const & comp_id = component_info.first;
-        auto const & components = component_info.second;
+        auto neighbors = BuildAdjacency(bindMesh);  //邻接表
+        auto const component_info = BuildComponents(neighbors);  //连通分量
+        auto const & comp_id = component_info.first;  //id
+        auto const & components = component_info.second;  //组成
 
-        std::vector<glm::vec3> comp_centers(components.size(), glm::vec3(0.0f));
+        std::vector<glm::vec3> comp_centers(components.size(), glm::vec3(0.0f));   //计算连通分量的中心值 用于与骨骼对应
         std::vector<int> comp_counts(components.size(), 0);
         for (std::size_t c = 0; c < components.size(); c++) {
             for (int v : components[c]) {
@@ -136,17 +136,17 @@ namespace VCX::Labs::Final::Skinning {
             int cap = std::min(options.componentMaxJoints, static_cast<int>(jcount));
             for (std::size_t c = 0; c < components.size(); c++) {
                 std::vector<std::pair<float, std::size_t>> seg_dists;
-                seg_dists.reserve(segments.size());
+                seg_dists.reserve(segments.size());  //计算到每一个骨骼的距离
                 for (std::size_t s = 0; s < segments.size(); s++) {
                     auto const & seg = segments[s];
                     if (seg.first >= jcount || seg.second >= jcount)
                         continue;
                     float t = 0.0f;
                     float dist = DistanceToSegment(comp_centers[c], bind_positions[seg.first], bind_positions[seg.second], t);
-                    seg_dists.emplace_back(dist, s);
+                    seg_dists.emplace_back(dist, s);  //s为骨骼编号
                 }
                 std::sort(seg_dists.begin(), seg_dists.end(),
-                          [](auto const & a, auto const & b) { return a.first < b.first; });
+                          [](auto const & a, auto const & b) { return a.first < b.first; });  //排序
                 int count = 0;
                 for (auto const & item : seg_dists) {
                     auto const & seg = segments[item.second];
@@ -167,7 +167,7 @@ namespace VCX::Labs::Final::Skinning {
         }
 
         std::vector<std::vector<float>> weight_field(jcount, std::vector<float>(vcount, 0.0f));
-
+        //初始化权重分布  后续再做热扩散 top-k 归一化
         for (std::size_t v = 0; v < vcount; v++) {
             std::vector<float> joint_weights(jcount, 0.0f);
             float nearest_dist = std::numeric_limits<float>::max();
@@ -190,7 +190,7 @@ namespace VCX::Labs::Final::Skinning {
                     nearest_dist = dist;
                     nearest_seg = static_cast<std::size_t>(&seg - &segments[0]);
                     found_nearest = true;
-                }
+                }//对于骨骼 计算距离 生成权重
                 float w = 0.0f;
                 if (weight_radius > 0.0f) {
                     float s = std::max(0.0f, 1.0f - (dist / weight_radius));
@@ -209,15 +209,15 @@ namespace VCX::Labs::Final::Skinning {
             }
 
             for (std::size_t j = 0; j < jcount; j++)
-                weight_field[j][v] = joint_weights[j];
+                weight_field[j][v] = joint_weights[j];  //写入weight field
         }
-
+        //热扩散权重迭代
         if (options.heatIterations > 0 && vcount > 0 && jcount > 0) {
             float lambda = std::clamp(options.heatLambda, 0.0f, 1.0f);
             int iterations = std::max(1, options.heatIterations);
             float anchor_radius = std::max(0.0f, options.heatAnchorRadius);
             std::vector<std::vector<unsigned char>> anchored;
-            if (anchor_radius > 0.0f) {
+            if (anchor_radius > 0.0f) {  //锚定特殊点
                 anchored.assign(jcount, std::vector<unsigned char>(vcount, 0));
                 float r2 = anchor_radius * anchor_radius;
                 for (std::size_t j = 0; j < jcount; j++) {
@@ -235,25 +235,25 @@ namespace VCX::Labs::Final::Skinning {
                 for (int it = 0; it < iterations; it++) {
                     for (std::size_t v = 0; v < vcount; v++) {
                         if (! anchored.empty() && anchored[j][v]) {
-                            tmp[v] = weight_field[j][v];
+                            tmp[v] = weight_field[j][v];  //锚定点权重不变
                             continue;
                         }
                         auto const & nb = neighbors[v];
                         if (nb.empty()) {
-                            tmp[v] = weight_field[j][v];
+                            tmp[v] = weight_field[j][v];  //无neighbor则直接continue
                             continue;
                         }
                         float sum = 0.0f;
                         for (int idx : nb)
-                            sum += weight_field[j][static_cast<std::size_t>(idx)];
-                        float avg = sum / static_cast<float>(nb.size());
-                        tmp[v] = (1.0f - lambda) * weight_field[j][v] + lambda * avg;
+                            sum += weight_field[j][static_cast<std::size_t>(idx)]; //计算sum
+                        float avg = sum / static_cast<float>(nb.size()); //计算avg
+                        tmp[v] = (1.0f - lambda) * weight_field[j][v] + lambda * avg;  //得到一次热扩散之后的tmp权重
                     }
                     weight_field[j].swap(tmp);
                 }
             }
         }
-
+        //选取top-k并归一化
         for (std::size_t v = 0; v < vcount; v++) {
             std::vector<unsigned char> const * allowed = nullptr;
             if (!allowed_joints.empty() && v < comp_id.size()) {
@@ -265,7 +265,7 @@ namespace VCX::Labs::Final::Skinning {
             std::array<int, kMaxInfluence> best_idx;
             best_w.fill(0.0f);
             best_idx.fill(-1);
-
+            //对每个joint 选择top-k
             for (std::size_t j = 0; j < jcount; j++) {
                 if (allowed && !(*allowed)[j])
                     continue;
@@ -327,7 +327,7 @@ namespace VCX::Labs::Final::Skinning {
 
         return true;
     }
-
+    //施加skinning
     bool ApplySkinning(
         Engine::SurfaceMesh const & bindMesh,
         Motion const & motion,
@@ -349,7 +349,7 @@ namespace VCX::Labs::Final::Skinning {
         for (std::size_t i = 0; i < joints.size(); i++) {
             glm::vec3 pos = joints[i]->get_globaltrans() * skeletonScale;
             glm::quat rot = joints[i]->get_globalrot();
-            joint_mats[i] = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);
+            joint_mats[i] = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);  //依旧变换矩阵
         }
         outMesh = bindMesh;
         for (std::size_t v = 0; v < bindMesh.Positions.size(); v++) {
@@ -361,7 +361,7 @@ namespace VCX::Labs::Final::Skinning {
                 float w = weights[v].weights[k];
                 sum += w * (joint_mats[idx] * invBind[idx] * base);
             }
-            outMesh.Positions[v] = glm::vec3(sum);
+            outMesh.Positions[v] = glm::vec3(sum);  //得到新位置
         }
         outMesh.Normals = outMesh.ComputeNormals();
         return true;
